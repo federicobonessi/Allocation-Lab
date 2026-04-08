@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Allocation Lab — The Meridian Playbook</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --ink:    #0c0e12;
+      --paper:  #12151c;
+      --lift:   #181d28;
+      --edge:   #222736;
+      --mist:   #2c3348;
+      --slate:  #56637a;
+      --silver: #8a94a8;
+      --ghost:  #c2c8d6;
+      --snow:   #eef0f4;
+      --gold:   #c9a84c;
+      --gold2:  #e8d5a3;
+      --gold3:  rgba(201,168,76,0.12);
+      --red:    #e05858;
+      --green:  #4db87a;
+      --blue:   #4a8fd4;
+      --orange: #d4824a;
+      --purple: #9b6bd4;
+      --mono:   'JetBrains Mono', monospace;
+      --serif:  'Playfair Display', serif;
+      --sans:   'DM Sans', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 15px; }
+
+    body {
+      background: var(--ink);
+      color: var(--ghost);
+      font-family: var(--sans);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* noise */
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 9999; opacity: 0.5;
+    }
+
+    /* ── HEADER ── */
+    header {
+      border-bottom: 1px solid var(--edge);
+      padding: 20px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky; top: 0;
+      background: rgba(12,14,18,0.94);
+      backdrop-filter: blur(16px);
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: baseline;
+      gap: 14px;
+    }
+
+    .brand-name {
+      font-family: var(--serif);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--snow);
+      letter-spacing: -0.3px;
+    }
+
+    .brand-name em { font-style: italic; color: var(--gold); }
+
+    .brand-sep { width: 1px; height: 14px; background: var(--edge); }
+
+    .brand-tag {
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--slate);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .weight-indicator {
+      font-family: var(--mono);
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .weight-total {
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--snow);
+      transition: color 0.3s;
+    }
+
+    .weight-total.over  { color: var(--red); }
+    .weight-total.exact { color: var(--green); }
+
+    .weight-label { color: var(--slate); font-size: 9px; letter-spacing: 2px; text-transform: uppercase; }
+
+    /* ── MAIN GRID ── */
+    .main {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      min-height: calc(100vh - 65px);
+    }
+
+    /* ── LEFT: TABLE ── */
+    .left-col {
+      border-right: 1px solid var(--edge);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .col-head {
+      padding: 28px 32px 20px;
+      border-bottom: 1px solid var(--edge);
+    }
+
+    .col-title {
+      font-family: var(--serif);
+      font-size: 22px;
+      font-weight: 400;
+      color: var(--snow);
+      margin-bottom: 4px;
+    }
+
+    .col-sub {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--slate);
+      letter-spacing: 1px;
+    }
+
+    /* TABLE */
+    .asset-table {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0;
+    }
+
+    .asset-table::-webkit-scrollbar { width: 3px; }
+    .asset-table::-webkit-scrollbar-thumb { background: var(--edge); border-radius: 2px; }
+
+    .table-header {
+      display: grid;
+      grid-template-columns: 1fr 56px 80px 64px;
+      gap: 0;
+      padding: 10px 32px;
+      border-bottom: 1px solid var(--edge);
+      font-family: var(--mono);
+      font-size: 8px;
+      color: var(--slate);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      position: sticky; top: 0;
+      background: var(--ink);
+    }
+
+    .asset-row {
+      display: grid;
+      grid-template-columns: 1fr 56px 80px 64px;
+      gap: 0;
+      padding: 0 32px;
+      border-bottom: 1px solid var(--edge);
+      align-items: center;
+      transition: background 0.15s;
+      position: relative;
+    }
+
+    .asset-row::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      border-radius: 0 2px 2px 0;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .asset-row:hover { background: rgba(255,255,255,0.015); }
+    .asset-row:hover::before { opacity: 1; }
+
+    .asset-cell {
+      padding: 14px 0;
+    }
+
+    .asset-name-wrap { display: flex; align-items: center; gap: 10px; }
+
+    .asset-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .asset-label {
+      font-size: 13px;
+      color: var(--ghost);
+      font-weight: 400;
+    }
+
+    .asset-class-tag {
+      font-family: var(--mono);
+      font-size: 8px;
+      color: var(--slate);
+      display: block;
+      margin-top: 2px;
+      letter-spacing: 0.5px;
+    }
+
+    /* weight input */
+    .weight-input {
+      width: 48px;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--edge);
+      color: var(--snow);
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 4px 4px 3px;
+      outline: none;
+      text-align: right;
+      transition: border-color 0.2s;
+    }
+
+    .weight-input:focus { border-color: var(--gold); }
+
+    .weight-suffix {
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--slate);
+      padding-left: 3px;
+    }
+
+    /* bar */
+    .bar-cell { padding-right: 8px; }
+    .bar-track {
+      height: 3px;
+      background: var(--edge);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.4s cubic-bezier(0.16,1,0.3,1);
+    }
+
+    /* ret/vol cells */
+    .stat-cell {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--slate);
+      text-align: right;
+      padding-right: 0;
+    }
+
+    /* ── PORTFOLIO METRICS STRIP ── */
+    .metrics-strip {
+      border-top: 1px solid var(--edge);
+      padding: 20px 32px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+    }
+
+    .metric-item {
+      padding: 0 16px 0 0;
+      border-right: 1px solid var(--edge);
+    }
+    .metric-item:first-child { padding-left: 0; }
+    .metric-item:last-child { border-right: none; }
+
+    .m-label {
+      font-family: var(--mono);
+      font-size: 8px;
+      color: var(--slate);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .m-value {
+      font-family: var(--serif);
+      font-size: 24px;
+      font-weight: 400;
+      color: var(--snow);
+      line-height: 1;
+      margin-bottom: 2px;
+    }
+
+    .m-value.positive { color: var(--green); }
+    .m-value.negative { color: var(--red); }
+    .m-value.gold     { color: var(--gold); }
+
+    .m-sub {
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--slate);
+    }
+
+    /* ── RIGHT: CHART ── */
+    .right-col {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chart-head {
+      padding: 28px 40px 20px;
+      border-bottom: 1px solid var(--edge);
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+    }
+
+    .chart-title {
+      font-family: var(--serif);
+      font-size: 22px;
+      font-weight: 400;
+      color: var(--snow);
+      margin-bottom: 4px;
+    }
+
+    .chart-sub {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--slate);
+      letter-spacing: 1px;
+    }
+
+    .preset-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .preset-btn {
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--slate);
+      border: 1px solid var(--edge);
+      background: transparent;
+      padding: 6px 12px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      cursor: pointer;
+      border-radius: 2px;
+      transition: all 0.2s;
+    }
+
+    .preset-btn:hover {
+      color: var(--gold);
+      border-color: var(--gold);
+      background: var(--gold3);
+    }
+
+    .chart-area {
+      flex: 1;
+      padding: 32px 40px;
+      position: relative;
+    }
+
+    #frontier-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* TOOLTIP */
+    #chart-tooltip {
+      position: absolute;
+      background: rgba(12,14,18,0.96);
+      border: 1px solid var(--edge);
+      padding: 12px 16px;
+      border-radius: 4px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      font-family: var(--mono);
+      font-size: 10px;
+      min-width: 160px;
+    }
+    #chart-tooltip.show { opacity: 1; }
+    .ct-name { color: var(--snow); font-size: 12px; margin-bottom: 8px; }
+    .ct-row { display: flex; justify-content: space-between; gap: 16px; color: var(--slate); margin-bottom: 3px; }
+    .ct-row span:last-child { color: var(--gold2); }
+
+    /* ── BOTTOM STRIP ── */
+    .bottom-strip {
+      border-top: 1px solid var(--edge);
+      padding: 14px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--slate);
+      letter-spacing: 1px;
+    }
+
+    .bottom-strip a {
+      color: var(--gold);
+      text-decoration: none;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    }
+    .bottom-strip a:hover { opacity: 1; }
+
+    /* ── COMPARISON PANEL ── */
+    .compare-panel {
+      border-top: 1px solid var(--edge);
+      padding: 20px 40px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--edge);
+    }
+
+    .compare-item {
+      background: var(--ink);
+      padding: 16px 20px;
+      transition: background 0.2s;
+    }
+    .compare-item:hover { background: var(--paper); }
+
+    .ci-label {
+      font-family: var(--mono);
+      font-size: 8px;
+      color: var(--slate);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .ci-dot { width: 5px; height: 5px; border-radius: 50%; }
+
+    .ci-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+
+    .ci-metric {
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--slate);
+    }
+
+    .ci-val {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--ghost);
+      font-weight: 500;
+    }
+
+    @media (max-width: 900px) {
+      .main { grid-template-columns: 1fr; }
+      .left-col { border-right: none; border-bottom: 1px solid var(--edge); }
+      .chart-area { min-height: 400px; }
+      .compare-panel { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="brand">
+    <span class="brand-name">Allocation <em>Lab</em></span>
+    <span class="brand-sep"></span>
+    <span class="brand-tag">The Meridian Playbook</span>
+  </div>
+  <div class="header-right">
+    <div class="weight-indicator">
+      <span class="weight-label">Total Weight</span>
+      <span class="weight-total" id="weight-total">0%</span>
+    </div>
+  </div>
+</header>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- LEFT: PORTFOLIO TABLE -->
+  <div class="left-col">
+    <div class="col-head">
+      <div class="col-title">Portfolio Builder</div>
+      <div class="col-sub">Edit weights — frontier updates live</div>
+    </div>
+
+    <div class="table-header">
+      <span>Asset Class</span>
+      <span style="text-align:right">Weight</span>
+      <span>Allocation</span>
+      <span style="text-align:right">Vol</span>
+    </div>
+
+    <div class="asset-table" id="asset-table"></div>
+
+    <div class="metrics-strip">
+      <div class="metric-item">
+        <div class="m-label">Exp. Return</div>
+        <div class="m-value positive" id="m-ret">—</div>
+        <div class="m-sub">annualised</div>
+      </div>
+      <div class="metric-item">
+        <div class="m-label">Volatility</div>
+        <div class="m-value gold" id="m-vol">—</div>
+        <div class="m-sub">annualised</div>
+      </div>
+      <div class="metric-item">
+        <div class="m-label">Sharpe Ratio</div>
+        <div class="m-value" id="m-sharpe">—</div>
+        <div class="m-sub">rf = 4.5%</div>
+      </div>
+      <div class="metric-item">
+        <div class="m-label">VaR 95%</div>
+        <div class="m-value negative" id="m-var">—</div>
+        <div class="m-sub">1-year</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: CHART -->
+  <div class="right-col">
+    <div class="chart-head">
+      <div>
+        <div class="chart-title">Efficient Frontier</div>
+        <div class="chart-sub">Risk / return space — hover points to explore</div>
+      </div>
+      <div class="preset-row">
+        <button class="preset-btn" onclick="applyPreset('conservative')">Conservative</button>
+        <button class="preset-btn" onclick="applyPreset('balanced')">Balanced</button>
+        <button class="preset-btn" onclick="applyPreset('growth')">Growth</button>
+        <button class="preset-btn" onclick="applyPreset('uhnw')">UHNW</button>
+      </div>
+    </div>
+
+    <div class="chart-area">
+      <canvas id="frontier-canvas"></canvas>
+      <div id="chart-tooltip">
+        <div class="ct-name" id="ct-name"></div>
+        <div class="ct-row"><span>Return</span><span id="ct-ret"></span></div>
+        <div class="ct-row"><span>Volatility</span><span id="ct-vol"></span></div>
+        <div class="ct-row"><span>Sharpe</span><span id="ct-sharpe"></span></div>
+      </div>
+    </div>
+
+    <!-- COMPARISON -->
+    <div class="compare-panel" id="compare-panel"></div>
+
+    <div class="bottom-strip">
+      <span>Returns & volatility based on 20-year historical averages. Not investment advice.</span>
+      <a href="https://themeridianplaybook.com" target="_blank">themeridianplaybook.com ↗</a>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── ASSET UNIVERSE ────────────────────────────────────────────────────────────
+const ASSETS = [
+  { id:'eq_us',   name:'US Equities',       cls:'Public Equity',   ret:10.2, vol:16.5, color:'#4a8fd4' },
+  { id:'eq_int',  name:'Intl Developed',    cls:'Public Equity',   ret:8.4,  vol:17.2, color:'#6aacdf' },
+  { id:'eq_em',   name:'Emerging Markets',  cls:'Public Equity',   ret:9.8,  vol:22.5, color:'#d4824a' },
+  { id:'pe',      name:'Private Equity',    cls:'Private Markets', ret:14.2, vol:20.5, color:'#9b6bd4' },
+  { id:'pc',      name:'Private Credit',    cls:'Private Markets', ret:10.8, vol:9.2,  color:'#b88ed4' },
+  { id:'re',      name:'Real Estate',       cls:'Real Assets',     ret:8.6,  vol:12.8, color:'#d4a84a' },
+  { id:'infra',   name:'Infrastructure',    cls:'Real Assets',     ret:8.2,  vol:10.5, color:'#4db87a' },
+  { id:'hf',      name:'Hedge Funds',       cls:'Alternatives',    ret:7.8,  vol:8.5,  color:'#58b4aa' },
+  { id:'bonds_ig',name:'IG Bonds',          cls:'Fixed Income',    ret:5.2,  vol:6.5,  color:'#5888d4' },
+  { id:'bonds_hy',name:'HY Bonds',          cls:'Fixed Income',    ret:7.2,  vol:11.2, color:'#d4786a' },
+  { id:'gold',    name:'Gold',              cls:'Safe Haven',      ret:6.8,  vol:15.2, color:'#c9a84c' },
+  { id:'cash',    name:'Cash / T-Bills',    cls:'Liquidity',       ret:4.5,  vol:0.5,  color:'#5a6a7a' },
+];
+
+// Simplified correlation matrix (upper triangle, row by row)
+const CORR = [
+// us   int  em   pe   pc   re   inf  hf   ig   hy   gold cash
+  [1.0, 0.82,0.68,0.72,0.35,0.42,0.38,0.45,0.15,0.52,-0.05,0.02], // us
+  [0.82,1.0, 0.72,0.65,0.30,0.40,0.36,0.42,0.18,0.48,-0.08,0.02], // int
+  [0.68,0.72,1.0, 0.60,0.28,0.35,0.30,0.38,0.05,0.50,-0.02,0.01], // em
+  [0.72,0.65,0.60,1.0, 0.42,0.52,0.45,0.48,0.10,0.45,-0.05,0.02], // pe
+  [0.35,0.30,0.28,0.42,1.0, 0.32,0.28,0.38,0.30,0.62,-0.08,0.05], // pc
+  [0.42,0.40,0.35,0.52,0.32,1.0, 0.55,0.35,0.22,0.38, 0.10,0.02], // re
+  [0.38,0.36,0.30,0.45,0.28,0.55,1.0, 0.30,0.28,0.32, 0.08,0.02], // infra
+  [0.45,0.42,0.38,0.48,0.38,0.35,0.30,1.0, 0.20,0.42,-0.02,0.05], // hf
+  [0.15,0.18,0.05,0.10,0.30,0.22,0.28,0.20,1.0, 0.42,-0.15,0.08], // ig
+  [0.52,0.48,0.50,0.45,0.62,0.38,0.32,0.42,0.42,1.0, -0.05,0.02], // hy
+  [-0.05,-0.08,-0.02,-0.05,-0.08,0.10,0.08,-0.02,-0.15,-0.05,1.0,0.01],// gold
+  [0.02,0.02,0.01,0.02,0.05,0.02,0.02,0.05,0.08,0.02,0.01,1.0],   // cash
+];
+
+// PRESETS
+const PRESETS = {
+  conservative: [5,5,0,0,5,5,5,5,25,0,10,35],
+  balanced:     [20,10,5,5,8,8,7,7,15,5,5,5],
+  growth:       [30,15,10,15,8,7,5,5,0,5,0,0],
+  uhnw:         [15,8,5,18,10,8,8,8,0,5,10,5],
+};
+
+// STATE
+let weights = new Array(ASSETS.length).fill(0);
+
+// ── PORTFOLIO MATH ────────────────────────────────────────────────────────────
+function portfolioStats(w) {
+  const total = w.reduce((a,b)=>a+b,0);
+  if (total < 1) return { ret:0, vol:0, sharpe:0, var95:0 };
+
+  const wn = w.map(x => x / total);
+  const ret = wn.reduce((s,wi,i) => s + wi * ASSETS[i].ret, 0);
+
+  let varP = 0;
+  for (let i = 0; i < ASSETS.length; i++) {
+    for (let j = 0; j < ASSETS.length; j++) {
+      varP += wn[i] * wn[j] * (ASSETS[i].vol/100) * (ASSETS[j].vol/100) * CORR[i][j];
+    }
+  }
+  const vol = Math.sqrt(varP) * 100;
+  const rf  = 4.5;
+  const sharpe = vol > 0 ? (ret - rf) / vol : 0;
+  const var95 = ret - 1.645 * vol;
+
+  return { ret: ret.toFixed(1), vol: vol.toFixed(1), sharpe: sharpe.toFixed(2), var95: var95.toFixed(1) };
+}
+
+// ── FRONTIER GENERATION ──────────────────────────────────────────────────────
+function generateFrontier() {
+  const points = [];
+  const n = ASSETS.length;
+
+  // Random portfolio sampling (Monte Carlo)
+  for (let s = 0; s < 2000; s++) {
+    const raw = ASSETS.map(() => Math.random());
+    const sum = raw.reduce((a,b)=>a+b,0);
+    const wn  = raw.map(x=>x/sum);
+
+    let ret = 0, varP = 0;
+    for (let i=0;i<n;i++) ret += wn[i]*ASSETS[i].ret;
+    for (let i=0;i<n;i++) for (let j=0;j<n;j++) {
+      varP += wn[i]*wn[j]*(ASSETS[i].vol/100)*(ASSETS[j].vol/100)*CORR[i][j];
+    }
+    const vol = Math.sqrt(varP)*100;
+    const sharpe = (ret-4.5)/vol;
+    points.push({ ret, vol, sharpe, weights: wn });
+  }
+
+  // Extract frontier (min vol for each return bucket)
+  const retBuckets = {};
+  points.forEach(p => {
+    const bucket = Math.round(p.ret * 4) / 4;
+    if (!retBuckets[bucket] || p.vol < retBuckets[bucket].vol) {
+      retBuckets[bucket] = p;
+    }
+  });
+
+  const frontier = Object.values(retBuckets).sort((a,b)=>a.vol-b.vol);
+  return { all: points, frontier };
+}
+
+// ── CANVAS ───────────────────────────────────────────────────────────────────
+const cvs = document.getElementById('frontier-canvas');
+const ctx  = cvs.getContext('2d');
+const tip  = document.getElementById('chart-tooltip');
+let frontierData = generateFrontier();
+let animFrame = 0;
+
+function resizeCanvas() {
+  const area = cvs.parentElement;
+  cvs.width  = area.clientWidth;
+  cvs.height = area.clientHeight - 20;
+  drawChart();
+}
+
+window.addEventListener('resize', resizeCanvas);
+
+function toCanvas(ret, vol, bounds) {
+  const px = 60 + (vol - bounds.volMin) / (bounds.volMax - bounds.volMin) * (cvs.width  - 80);
+  const py = 20 + (1 - (ret - bounds.retMin) / (bounds.retMax - bounds.retMin)) * (cvs.height - 48);
+  return [px, py];
+}
+
+function drawChart() {
+  const W = cvs.width, H = cvs.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const { all, frontier } = frontierData;
+  if (!all.length) return;
+
+  const bounds = {
+    volMin: Math.max(0, Math.min(...all.map(p=>p.vol)) - 1),
+    volMax: Math.max(...all.map(p=>p.vol)) + 1,
+    retMin: Math.min(...all.map(p=>p.ret)) - 0.5,
+    retMax: Math.max(...all.map(p=>p.ret)) + 0.5,
+  };
+
+  // Grid
+  ctx.strokeStyle = 'rgba(34,39,54,0.8)';
+  ctx.lineWidth = 1;
+  for (let v = Math.ceil(bounds.volMin); v <= bounds.volMax; v += 2) {
+    const [px] = toCanvas(0, v, bounds);
+    ctx.beginPath(); ctx.moveTo(px, 20); ctx.lineTo(px, H-28);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(86,99,122,0.6)';
+    ctx.font = `9px 'JetBrains Mono', monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText(v + '%', px, H-14);
+  }
+  for (let r = Math.ceil(bounds.retMin); r <= bounds.retMax; r += 2) {
+    const [,py] = toCanvas(r, 0, bounds);
+    ctx.beginPath(); ctx.moveTo(56, py); ctx.lineTo(W-12, py);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(86,99,122,0.6)';
+    ctx.font = `9px 'JetBrains Mono', monospace`;
+    ctx.textAlign = 'right';
+    ctx.fillText(r + '%', 50, py + 3);
+  }
+
+  // Axis labels
+  ctx.fillStyle = 'rgba(86,99,122,0.8)';
+  ctx.font = `9px 'JetBrains Mono', monospace`;
+  ctx.textAlign = 'center';
+  ctx.fillText('VOLATILITY (RISK)', W/2, H-2);
+  ctx.save();
+  ctx.translate(12, H/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.fillText('EXPECTED RETURN', 0, 0);
+  ctx.restore();
+
+  // Scatter (random portfolios) — coloured by Sharpe
+  all.forEach(p => {
+    const [px, py] = toCanvas(p.ret, p.vol, bounds);
+    const t = Math.max(0, Math.min(1, (p.sharpe - 0.1) / 0.8));
+    const r2 = Math.round(74 + t*125);
+    const g2 = Math.round(96 + t*88);
+    const b2 = Math.round(128 - t*50);
+    ctx.beginPath();
+    ctx.arc(px, py, 1.5, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(${r2},${g2},${b2},0.25)`;
+    ctx.fill();
+  });
+
+  // Efficient frontier line
+  if (frontier.length > 1) {
+    ctx.beginPath();
+    frontier.forEach((p, i) => {
+      const [px, py] = toCanvas(p.ret, p.vol, bounds);
+      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    });
+    ctx.strokeStyle = 'rgba(201,168,76,0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Frontier points
+    frontier.forEach(p => {
+      const [px, py] = toCanvas(p.ret, p.vol, bounds);
+      ctx.beginPath();
+      ctx.arc(px, py, 3, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(201,168,76,0.7)';
+      ctx.fill();
+    });
+  }
+
+  // CURRENT PORTFOLIO POINT
+  const total = weights.reduce((a,b)=>a+b,0);
+  if (total >= 95) {
+    const stats = portfolioStats(weights);
+    const [px, py] = toCanvas(parseFloat(stats.ret), parseFloat(stats.vol), bounds);
+
+    // Pulse ring
+    const pulse = 0.5 + 0.5 * Math.sin(animFrame * 0.06);
+    ctx.beginPath();
+    ctx.arc(px, py, 8 + pulse * 4, 0, Math.PI*2);
+    ctx.strokeStyle = `rgba(201,168,76,${0.3 * pulse})`;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(px, py, 6, 0, Math.PI*2);
+    ctx.fillStyle = '#c9a84c';
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.font = `bold 10px 'JetBrains Mono', monospace`;
+    ctx.fillStyle = '#e8d5a3';
+    ctx.textAlign = 'left';
+    ctx.fillText('Your Portfolio', px + 10, py - 4);
+  }
+
+  // PRESET BENCHMARKS
+  const benchmarks = [
+    { label:'60/40', w:[24,0,0,0,0,0,0,0,40,0,0,36], color:'rgba(74,143,212,0.7)' },
+    { label:'UHNW',  w:PRESETS.uhnw,                  color:'rgba(155,107,212,0.7)' },
+  ];
+  benchmarks.forEach(b => {
+    const s = portfolioStats(b.w);
+    if (parseFloat(s.vol) > 0) {
+      const [px, py] = toCanvas(parseFloat(s.ret), parseFloat(s.vol), bounds);
+      ctx.beginPath();
+      ctx.arc(px, py, 5, 0, Math.PI*2);
+      ctx.fillStyle = b.color;
+      ctx.fill();
+      ctx.font = `9px 'JetBrains Mono', monospace`;
+      ctx.fillStyle = b.color;
+      ctx.textAlign = 'left';
+      ctx.fillText(b.label, px + 8, py + 3);
+    }
+  });
+
+  animFrame++;
+  requestAnimationFrame(drawChart);
+}
+
+// ── HOVER ON CHART ────────────────────────────────────────────────────────────
+cvs.addEventListener('mousemove', e => {
+  const rect  = cvs.getBoundingClientRect();
+  const mx    = e.clientX - rect.left;
+  const my    = e.clientY - rect.top;
+  const { all, frontier } = frontierData;
+
+  const bounds = {
+    volMin: Math.max(0, Math.min(...all.map(p=>p.vol))-1),
+    volMax: Math.max(...all.map(p=>p.vol))+1,
+    retMin: Math.min(...all.map(p=>p.ret))-0.5,
+    retMax: Math.max(...all.map(p=>p.ret))+0.5,
+  };
+
+  let closest = null, minD = Infinity;
+  frontier.forEach(p => {
+    const [px, py] = toCanvas(p.ret, p.vol, bounds);
+    const d = Math.sqrt((mx-px)**2 + (my-py)**2);
+    if (d < minD) { minD = d; closest = p; }
+  });
+
+  if (closest && minD < 20) {
+    document.getElementById('ct-name').textContent   = `Sharpe: ${closest.sharpe.toFixed(2)}`;
+    document.getElementById('ct-ret').textContent    = closest.ret.toFixed(1) + '%';
+    document.getElementById('ct-vol').textContent    = closest.vol.toFixed(1) + '%';
+    document.getElementById('ct-sharpe').textContent = closest.sharpe.toFixed(2);
+    tip.style.left = (e.clientX - cvs.getBoundingClientRect().left + 16) + 'px';
+    tip.style.top  = (e.clientY - cvs.getBoundingClientRect().top  - 20) + 'px';
+    tip.classList.add('show');
+  } else {
+    tip.classList.remove('show');
+  }
+});
+
+cvs.addEventListener('mouseleave', () => tip.classList.remove('show'));
+
+// ── BUILD TABLE ───────────────────────────────────────────────────────────────
+function buildTable() {
+  const table = document.getElementById('asset-table');
+  table.innerHTML = '';
+
+  ASSETS.forEach((a, i) => {
+    const row = document.createElement('div');
+    row.className = 'asset-row';
+    row.style.setProperty('--row-color', a.color);
+    row.style.cssText += `--row-color:${a.color}`;
+
+    // border left color
+    const style = document.createElement('style');
+    style.textContent = `.asset-row:nth-child(${i+1})::before { background: ${a.color}; }`;
+    document.head.appendChild(style);
+
+    row.innerHTML = `
+      <div class="asset-cell">
+        <div class="asset-name-wrap">
+          <div class="asset-dot" style="background:${a.color}"></div>
+          <div>
+            <span class="asset-label">${a.name}</span>
+            <span class="asset-class-tag">${a.cls}</span>
+          </div>
+        </div>
+      </div>
+      <div class="asset-cell" style="display:flex;align-items:center;gap:2px">
+        <input class="weight-input" type="number" min="0" max="100" step="1"
+               value="${weights[i]}" data-idx="${i}" id="input-${i}"/>
+        <span class="weight-suffix">%</span>
+      </div>
+      <div class="asset-cell bar-cell">
+        <div class="bar-track">
+          <div class="bar-fill" id="bar-${i}" style="background:${a.color};width:${weights[i]}%"></div>
+        </div>
+      </div>
+      <div class="asset-cell stat-cell">${a.vol}%</div>
+    `;
+
+    table.appendChild(row);
+  });
+
+  // Bind inputs
+  document.querySelectorAll('.weight-input').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const idx = parseInt(inp.dataset.idx);
+      const val = Math.max(0, Math.min(100, parseFloat(inp.value) || 0));
+      weights[idx] = val;
+      updateUI();
+    });
+  });
+}
+
+// ── UPDATE UI ─────────────────────────────────────────────────────────────────
+function updateUI() {
+  const total = weights.reduce((a,b)=>a+b,0);
+
+  // Weight total indicator
+  const wtEl = document.getElementById('weight-total');
+  wtEl.textContent = total.toFixed(0) + '%';
+  wtEl.className = 'weight-total' + (total > 101 ? ' over' : total >= 99 && total <= 101 ? ' exact' : '');
+
+  // Bars
+  weights.forEach((w, i) => {
+    const bar = document.getElementById('bar-' + i);
+    if (bar) bar.style.width = Math.min(100, w) + '%';
+  });
+
+  // Metrics
+  if (total >= 95 && total <= 105) {
+    const s = portfolioStats(weights);
+    document.getElementById('m-ret').textContent    = s.ret + '%';
+    document.getElementById('m-vol').textContent    = s.vol + '%';
+    document.getElementById('m-sharpe').textContent = s.sharpe;
+    document.getElementById('m-var').textContent    = s.var95 + '%';
+    document.getElementById('m-sharpe').className   = 'm-value' + (parseFloat(s.sharpe) > 0.6 ? ' positive' : '');
+    document.getElementById('m-var').className      = 'm-value' + (parseFloat(s.var95) < -10 ? ' negative' : '');
+  } else {
+    ['m-ret','m-vol','m-sharpe','m-var'].forEach(id => {
+      document.getElementById(id).textContent = '—';
+    });
+  }
+
+  // Regenerate frontier with current portfolio as anchor
+  updateComparison();
+}
+
+// ── COMPARISON ────────────────────────────────────────────────────────────────
+function updateComparison() {
+  const panel = document.getElementById('compare-panel');
+  const configs = [
+    { label:'Your Portfolio', color:'#c9a84c', w: weights },
+    { label:'Classic 60/40',  color:'#4a8fd4', w: [24,0,0,0,0,0,0,0,40,0,0,36] },
+    { label:'UHNW Benchmark', color:'#9b6bd4', w: PRESETS.uhnw },
+  ];
+
+  panel.innerHTML = configs.map(c => {
+    const s = portfolioStats(c.w);
+    const total = c.w.reduce((a,b)=>a+b,0);
+    if (total < 95 && c.label === 'Your Portfolio') {
+      return `<div class="compare-item">
+        <div class="ci-label"><div class="ci-dot" style="background:${c.color}"></div>${c.label}</div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--slate)">Adjust weights to 100%</div>
+      </div>`;
+    }
+    return `<div class="compare-item">
+      <div class="ci-label"><div class="ci-dot" style="background:${c.color}"></div>${c.label}</div>
+      <div class="ci-row"><span class="ci-metric">Return</span><span class="ci-val">${s.ret}%</span></div>
+      <div class="ci-row"><span class="ci-metric">Volatility</span><span class="ci-val">${s.vol}%</span></div>
+      <div class="ci-row"><span class="ci-metric">Sharpe</span><span class="ci-val">${s.sharpe}</span></div>
+      <div class="ci-row"><span class="ci-metric">VaR 95%</span><span class="ci-val">${s.var95}%</span></div>
+    </div>`;
+  }).join('');
+}
+
+// ── PRESETS ───────────────────────────────────────────────────────────────────
+function applyPreset(name) {
+  weights = [...PRESETS[name]];
+  ASSETS.forEach((a, i) => {
+    const inp = document.getElementById('input-' + i);
+    if (inp) inp.value = weights[i];
+  });
+  updateUI();
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+buildTable();
+applyPreset('balanced');
+resizeCanvas();
+</script>
+</body>
+</html>
